@@ -1,7 +1,11 @@
 import Foundation
 
 final class BankViewModel {
-    private let vault: Vault = Vault()
+    private let vault: VaultDefinition
+
+    init(vault: VaultDefinition = Vault()) {
+        self.vault = vault
+    }
 
     func createSavingsAccount(titularity: String) throws {
         try vault.createSavingsAccount(titularity: titularity)

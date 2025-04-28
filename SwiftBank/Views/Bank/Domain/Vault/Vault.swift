@@ -1,7 +1,9 @@
 import Foundation
 
-final class Vault {
+final class Vault: VaultDefinition {
     private var savings: [String: Double] = [:]
+
+    init() {}
 
     func isAccountAlreadyCreated(for titularity: String) -> Bool {
         savings[titularity] != nil

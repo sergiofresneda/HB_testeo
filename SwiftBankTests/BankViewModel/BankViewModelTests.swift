@@ -3,13 +3,16 @@ import XCTest
 
 final class BankViewModelTests: XCTestCase {
     var sut: BankViewModel!
+    var stub: VaultStub!
 
     override func setUp() {
-        sut = BankViewModel()
+        stub = VaultStub()
+        sut = BankViewModel(vault: stub)
     }
 
     override func tearDown() {
         sut = nil
+        stub = nil
     }
 
     func test_createSavingsAccount() throws {
@@ -26,6 +29,7 @@ final class BankViewModelTests: XCTestCase {
 
         // When
         try sut.createSavingsAccount(titularity: titularity)
+        stub.shouldThrowError = VaultError.accountAlreadyExists
 
         // Then
         XCTAssertThrowsError(try sut.createSavingsAccount(titularity: titularity))
@@ -36,11 +40,12 @@ final class BankViewModelTests: XCTestCase {
         let titularity = "John Doe"
         let amount = 100.0
         let order = Order(amount: amount, titularity: titularity)
+        stub.accountBalanceResult = amount
 
         // When
         try sut.createSavingsAccount(titularity: titularity)
         try sut.deposit(order: order)
-
+        
         // Then
         let optionalResult = try? sut.balance(for: titularity)
         let result = try XCTUnwrap(optionalResult)
@@ -52,6 +57,7 @@ final class BankViewModelTests: XCTestCase {
         let titularity = "John Doe"
         let amount = 100.0
         let order = Order(amount: amount, titularity: titularity)
+        stub.shouldThrowError = VaultError.accountNotFound
 
         // Then
         XCTAssertThrowsError(try sut.deposit(order: order))
@@ -64,6 +70,7 @@ final class BankViewModelTests: XCTestCase {
         let order = Order(amount: amount, titularity: titularity)
 
         try sut.createSavingsAccount(titularity: titularity)
+        stub.shouldThrowError = VaultError.invalidAmount
 
         // Then
         XCTAssertThrowsError(try sut.deposit(order: order))
@@ -78,6 +85,7 @@ final class BankViewModelTests: XCTestCase {
 
         try sut.createSavingsAccount(titularity: titularity)
         try sut.deposit(order: order)
+        stub.withdrawResult = .success(())
 
         // When
         sut.withdraw(order: order) { result in
@@ -107,6 +115,7 @@ final class BankViewModelTests: XCTestCase {
         var error: VaultError?
 
         try sut.createSavingsAccount(titularity: titularity)
+        stub.withdrawResult = .failure(.insufficientFunds)
 
         // When
         sut.withdraw(order: order) { result in
@@ -131,6 +140,7 @@ final class BankViewModelTests: XCTestCase {
         let order = Order(amount: amount, titularity: titularity)
         let expectation = expectation(description: "Withdraw completion")
         var error: VaultError?
+        stub.withdrawResult = .failure(.accountNotFound)
 
         // When
         sut.withdraw(order: order) { result in
@@ -151,6 +161,7 @@ final class BankViewModelTests: XCTestCase {
     func test_balance_accountNotFound() throws {
         // Given
         let titularity = "John Doe"
+        stub.shouldThrowError = VaultError.accountNotFound
 
         // Then
         XCTAssertThrowsError(try sut.balance(for: titularity))

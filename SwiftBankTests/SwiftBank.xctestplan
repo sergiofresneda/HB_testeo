@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "ACB19EAC-94A7-4C20-ABA0-EC148AC2C2B7",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:SwiftBank.xcodeproj",
+      "identifier" : "BF08DB792DAD170D007F2F5B",
+      "name" : "SwiftBank"
+    },
+    "testExecutionOrdering" : "random"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:SwiftBank.xcodeproj",
+        "identifier" : "BF08DB8F2DAD170E007F2F5B",
+        "name" : "SwiftBankTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:SwiftBank.xcodeproj",
+        "identifier" : "BF08DB992DAD170E007F2F5B",
+        "name" : "SwiftBankUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -1,6 +1,6 @@
 import Foundation
 
-enum VaultError: Error {
+enum VaultError: Error, Sendable {
     case accountNotFound
     case insufficientFunds
     case accountAlreadyExists

@@ -2,7 +2,7 @@ import Foundation
 
 final class Vault: VaultDefinition {
     private var savings: [String: Double] = [:]
-
+    
     init() {}
 
     func isAccountAlreadyCreated(for titularity: String) -> Bool {
@@ -48,10 +48,8 @@ final class Vault: VaultDefinition {
 
             savings[order.titularity, default: 0] -= order.amount
             completion(.success(()))
-        } catch let error as VaultError {
-            completion(.failure(error))
         } catch {
-            completion(.failure(.unknown))
+            completion(.failure((error as? VaultError) ?? .unknown))
         }
     }
 }

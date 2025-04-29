@@ -2,25 +2,32 @@ import Foundation
 
 final class Vault: VaultDefinition {
     private var savings: [String: Double] = [:]
-    
+    private var queue: DispatchQueue = DispatchQueue(label: "VaultQueue")
+
     init() {}
 
     func isAccountAlreadyCreated(for titularity: String) -> Bool {
-        savings[titularity] != nil
+        queue.sync {
+            savings[titularity] != nil
+        }
     }
 
     func accountBalance(for titularity: String) throws -> Double {
         guard isAccountAlreadyCreated(for: titularity) else {
             throw VaultError.accountNotFound
         }
-        return savings[titularity, default: 0]
+        return queue.sync {
+            savings[titularity, default: 0]
+        }
     }
 
     func createSavingsAccount(titularity: String) throws {
         guard !isAccountAlreadyCreated(for: titularity) else {
             throw VaultError.accountAlreadyExists
         }
-        savings[titularity, default: 0] = 0
+        return queue.sync {
+            savings[titularity, default: 0] = 0
+        }
     }
 
     func deposit(order: Order) throws {
@@ -30,26 +37,29 @@ final class Vault: VaultDefinition {
         guard order.amount > 0 else {
             throw VaultError.invalidAmount
         }
-
-        savings[order.titularity, default: 0] += order.amount
+        return queue.sync {
+            savings[order.titularity, default: 0] += order.amount
+        }
     }
 
-    func withdraw(order: Order, completion: (Result<Void, VaultError>) -> Void) {
+    func withdraw(order: Order, completion: @escaping (Result<Void, VaultError>) -> Void) {
         guard isAccountAlreadyCreated(for: order.titularity) else {
             completion(.failure(.accountNotFound))
             return
         }
-        do {
-            let currentBalance = try accountBalance(for: order.titularity)
-            guard currentBalance >= order.amount else {
-                completion(.failure(.insufficientFunds))
-                return
-            }
+        queue.async {
+            do {
+                let currentBalance = try self.accountBalance(for: order.titularity)
+                guard currentBalance >= order.amount else {
+                    completion(.failure(.insufficientFunds))
+                    return
+                }
 
-            savings[order.titularity, default: 0] -= order.amount
-            completion(.success(()))
-        } catch {
-            completion(.failure((error as? VaultError) ?? .unknown))
+                self.savings[order.titularity, default: 0] -= order.amount
+                completion(.success(()))
+            } catch {
+                completion(.failure((error as? VaultError) ?? .unknown))
+            }
         }
     }
 }

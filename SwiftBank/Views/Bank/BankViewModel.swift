@@ -15,7 +15,7 @@ final class BankViewModel {
         try vault.deposit(order: order)
     }
 
-    func withdraw(order: Order, completion: (Result<Void, VaultError>) -> Void) {
+    func withdraw(order: Order, completion: @escaping (Result<Void, VaultError>) -> Void) {
         vault.withdraw(order: order, completion: completion)
     }
 

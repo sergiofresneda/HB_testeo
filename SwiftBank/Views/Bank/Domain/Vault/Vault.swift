@@ -2,12 +2,15 @@ import Foundation
 
 final class Vault: VaultDefinition {
     private var savings: [String: Double] = [:]
-    private var queue: DispatchQueue = DispatchQueue(label: "VaultQueue")
+    private let syncQueue: DispatchQueue = DispatchQueue(label: "VaultQueue")
+    private let dispatchKey: DispatchSpecificKey<Void> = DispatchSpecificKey<Void>()
 
-    init() {}
+    init() {
+        syncQueue.setSpecific(key: dispatchKey, value: ())
+    }
 
     func isAccountAlreadyCreated(for titularity: String) -> Bool {
-        queue.sync {
+        performSync {
             savings[titularity] != nil
         }
     }
@@ -16,7 +19,7 @@ final class Vault: VaultDefinition {
         guard isAccountAlreadyCreated(for: titularity) else {
             throw VaultError.accountNotFound
         }
-        return queue.sync {
+        return performSync {
             savings[titularity, default: 0]
         }
     }
@@ -25,7 +28,7 @@ final class Vault: VaultDefinition {
         guard !isAccountAlreadyCreated(for: titularity) else {
             throw VaultError.accountAlreadyExists
         }
-        return queue.sync {
+        return performSync {
             savings[titularity, default: 0] = 0
         }
     }
@@ -37,7 +40,7 @@ final class Vault: VaultDefinition {
         guard order.amount > 0 else {
             throw VaultError.invalidAmount
         }
-        return queue.sync {
+        return performSync {
             savings[order.titularity, default: 0] += order.amount
         }
     }
@@ -47,7 +50,7 @@ final class Vault: VaultDefinition {
             completion(.failure(.accountNotFound))
             return
         }
-        queue.async {
+        performSync {
             do {
                 let currentBalance = try self.accountBalance(for: order.titularity)
                 guard currentBalance >= order.amount else {
@@ -60,6 +63,15 @@ final class Vault: VaultDefinition {
             } catch {
                 completion(.failure((error as? VaultError) ?? .unknown))
             }
+        }
+    }
+}
+private extension Vault {
+    func performSync<T>(_ block: () -> T) -> T {
+        if DispatchQueue.getSpecific(key: dispatchKey) != nil {
+                return block()
+        } else {
+            return syncQueue.sync(execute: block)
         }
     }
 }

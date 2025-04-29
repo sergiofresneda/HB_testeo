@@ -7,19 +7,19 @@ final class BankViewModel {
         self.vault = vault
     }
 
-    func createSavingsAccount(titularity: String) throws {
-        try vault.createSavingsAccount(titularity: titularity)
+    func createSavingsAccount(titularity: String) async throws {
+        try await vault.createSavingsAccount(titularity: titularity)
     }
 
-    func deposit(order: Order) throws {
-        try vault.deposit(order: order)
+    func deposit(order: Order) async throws {
+        try await vault.deposit(order: order)
     }
 
-    func withdraw(order: Order, completion: @escaping (Result<Void, VaultError>) -> Void) {
-        vault.withdraw(order: order, completion: completion)
+    func withdraw(order: Order, completion: @escaping (Result<Void, VaultError>) -> Void) async {
+        await vault.withdraw(order: order, completion: completion)
     }
 
-    func balance(for titularity: String) throws -> Double {
-        try vault.accountBalance(for: titularity)
+    func balance(for titularity: String) async throws -> Double {
+        try await vault.accountBalance(for: titularity)
     }
 }

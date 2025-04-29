@@ -2,6 +2,7 @@
 import XCTest
 @testable import SwiftBank
 
+@preconcurrency
 final class VaultTests: XCTestCase {
     var sut: Vault!
 
@@ -13,84 +14,99 @@ final class VaultTests: XCTestCase {
         sut = nil
     }
 
-    func test_isAccountAlreadyCreated() {
+    func test_isAccountAlreadyCreated() async {
         // Given
         let titularity = "Sergio"
 
         // When
-        let result = sut.isAccountAlreadyCreated(for: titularity)
+        let result = await sut.isAccountAlreadyCreated(for: titularity)
 
         // Then
         XCTAssertFalse(result)
     }
 
-    func test_isAccounAlreadyCreated_returnTrue() throws {
+    func test_isAccounAlreadyCreated_returnTrue() async throws {
         // Given
         let titularity = "Sergio"
 
         // When
-        try sut.createSavingsAccount(titularity: titularity)
-        let result = sut.isAccountAlreadyCreated(for: titularity)
+        try await sut.createSavingsAccount(titularity: titularity)
+        let result = await sut.isAccountAlreadyCreated(for: titularity)
 
         // Then
         XCTAssertTrue(result)
     }
 
-    func test_accountBalance() throws {
+    func test_accountBalance() async throws {
         // Given
         let titularity = "Sergio"
         let expectedResult: Double = .zero
 
         // When
-        try sut.createSavingsAccount(titularity: titularity)
-        let result = try sut.accountBalance(for: titularity)
+        try await sut.createSavingsAccount(titularity: titularity)
+        let result = try await sut.accountBalance(for: titularity)
 
         // Then
         XCTAssertEqual(result, expectedResult)
     }
 
-    func test_accountBalance_throws() {
+    func test_accountBalance_throws() async {
         // Given
         let titularity = "Sergio"
 
         // When
         // Then
-        XCTAssertThrowsError(try sut.accountBalance(for: titularity))
+        do {
+            _ = try await sut.accountBalance(for: titularity)
+        } catch {
+            XCTAssertEqual(error as? VaultError, .accountNotFound)
+        }
     }
 
-    func test_createSavingsAccount() {
+    func test_createSavingsAccount() async {
         // Given
         let titularity = "Sergio"
 
         // When
         // Then
-        XCTAssertNoThrow(try sut.createSavingsAccount(titularity: titularity)
-        )
+        do {
+            try await sut.createSavingsAccount(titularity: titularity)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
-    func test_createSavingsAccount_throws() throws {
+    func test_createSavingsAccount_throws() async throws {
         // Given
         let titularity = "Sergio"
 
         // When
         // Then
-        try sut.createSavingsAccount(titularity: titularity)
-        XCTAssertThrowsError(try sut.createSavingsAccount(titularity: titularity))
+        try await sut.createSavingsAccount(titularity: titularity)
+        do {
+            try await sut.createSavingsAccount(titularity: titularity)
+        } catch {
+            XCTAssertEqual(error as? VaultError, .accountAlreadyExists)
+        }
     }
 
-    func test_deposit() throws {
+    func test_deposit() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = 100
         let order = Order(amount: amount, titularity: titularity)
 
-        try sut.createSavingsAccount(titularity: titularity)
+        try await sut.createSavingsAccount(titularity: titularity)
         // When
         // Then
-        XCTAssertNoThrow(try sut.deposit(order: order))
+        do {
+            try await sut.deposit(order: order)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
-    func test_deposit_throwsAccountNotFound() throws {
+    func test_deposit_throwsAccountNotFound() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = 100
@@ -98,33 +114,41 @@ final class VaultTests: XCTestCase {
 
         // When
         // Then
-        XCTAssertThrowsError(try sut.deposit(order: order))
+        do {
+            try await sut.deposit(order: order)
+        } catch {
+            XCTAssertEqual(error as? VaultError, .accountNotFound)
+        }
     }
 
-    func test_deposit_throwsInvalidAmount() throws {
+    func test_deposit_throwsInvalidAmount() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = .zero
         let order = Order(amount: amount, titularity: titularity)
 
-        try sut.createSavingsAccount(titularity: titularity)
+        try await sut.createSavingsAccount(titularity: titularity)
 
         // When
         // Then
-        XCTAssertThrowsError(try sut.deposit(order: order))
+        do {
+            try await sut.deposit(order: order)
+        } catch {
+            XCTAssertEqual(error as? VaultError, .invalidAmount)
+        }
     }
 
-    func test_withdraw() throws {
+    func test_withdraw() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = 100
         let order = Order(amount: amount, titularity: titularity)
         let expectation = XCTestExpectation(description: "withdraw")
-        try sut.createSavingsAccount(titularity: titularity)
-        try sut.deposit(order: order)
+        try await sut.createSavingsAccount(titularity: titularity)
+        try await sut.deposit(order: order)
 
         // When
-        sut.withdraw(order: order, completion: { result in
+        await sut.withdraw(order: order, completion: { result in
             switch result {
             case .failure:
                 XCTFail("Unexpected result")
@@ -136,10 +160,10 @@ final class VaultTests: XCTestCase {
 
         // Then
 
-        wait(for: [expectation])
+        await fulfillment(of: [expectation])
     }
 
-    func test_withdraw_throwsAccountNotFound() throws {
+    func test_withdraw_throwsAccountNotFound() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = 100
@@ -149,7 +173,7 @@ final class VaultTests: XCTestCase {
         var error: VaultError?
 
         // When
-        sut.withdraw(order: order) { result in
+        await sut.withdraw(order: order) { result in
             switch result {
             case .failure(let withdrawError):
                 error = withdrawError
@@ -160,11 +184,11 @@ final class VaultTests: XCTestCase {
         }
 
         // Then
-        wait(for: [expectation])
+        await fulfillment(of: [expectation])
         XCTAssertEqual(error, expectedError)
     }
 
-    func test_withdraw_throwsInsufficientFunds() throws {
+    func test_withdraw_throwsInsufficientFunds() async throws {
         // Given
         let titularity = "Sergio"
         let amount: Double = 100
@@ -174,11 +198,11 @@ final class VaultTests: XCTestCase {
         let expectedError = VaultError.insufficientFunds
         var error: VaultError?
 
-        try sut.createSavingsAccount(titularity: titularity)
-        try sut.deposit(order: order)
+        try await sut.createSavingsAccount(titularity: titularity)
+        try await sut.deposit(order: order)
 
         // When
-        sut.withdraw(order: withdrawOrder) { result in
+        await sut.withdraw(order: withdrawOrder) { result in
             switch result {
             case .failure(let withdrawError):
                 error = withdrawError
@@ -189,42 +213,44 @@ final class VaultTests: XCTestCase {
         }
 
         // Then
-        wait(for: [expectation])
+        await fulfillment(of: [expectation])
         XCTAssertEqual(error, expectedError)
     }
 
     // MARK: - Thread Safe Tests
 
-    func test_depositAndWithdraw() throws {
+    func test_depositAndWithdraw() async throws {
         // Given
         let iterations = 100
         let titularity = "Sergio"
-        try? sut.createSavingsAccount(titularity: titularity)
+        try? await sut.createSavingsAccount(titularity: titularity)
         let expectation = XCTestExpectation(description: "depositAndWithdraw")
         expectation.expectedFulfillmentCount = iterations
 
         // When
         DispatchQueue.concurrentPerform(iterations: iterations) { some in
-            let amount: Double = Double.random(in: 10..<100) * Double(some)
-            let order = Order(amount: amount, titularity: titularity)
-            do {
-                let balance = try sut.accountBalance(for: titularity)
-                print("🔴 \(balance)")
+            Task {
+                let amount: Double = Double.random(in: 10..<100) * Double(some)
+                let order = Order(amount: amount, titularity: titularity)
+                do {
+                    let balance = try await sut.accountBalance(for: titularity)
+                    print("🔴 \(balance)")
 
-                try sut.deposit(order: order)
-                sut.withdraw(order: order) { result in
-                    switch result {
-                    default:
-                        break
+                    try await sut.deposit(order: order)
+                    await sut.withdraw(order: order) { result in
+                        switch result {
+                        default:
+                            break
+                        }
                     }
+                } catch {
+                    // Silence is golden
                 }
-            } catch {
-                // Silence is golden
+                expectation.fulfill()
             }
-            expectation.fulfill()
         }
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        await fulfillment(of: [expectation])
     }
 }
